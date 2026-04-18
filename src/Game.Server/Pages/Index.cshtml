@@ -1,0 +1,62 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home";
+}
+
+<section class="hero-banner mb-4 mb-lg-5">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-7">
+            <span class="eyebrow">ASP.NET Core Razor Pages + Web API</span>
+            <h1 class="display-5 fw-bold mt-3">Checkers project portal for registration, queries, and game handoff.</h1>
+            <p class="lead mt-3 mb-4">
+                Use this site to register participants, review the project structure, and move cleanly into the WinForms gameplay client.
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-primary btn-lg px-4" asp-page="/Registration">Start registration</a>
+                <a class="btn btn-outline-light btn-lg px-4" asp-page="/About">About this submission</a>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="feature-card p-4 p-lg-5">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <div class="text-uppercase small text-muted">Project highlights</div>
+                        <h2 class="h4 mb-0">Built for the course defense</h2>
+                    </div>
+                    <span class="badge rounded-pill text-bg-success">.NET 9</span>
+                </div>
+                <ul class="feature-list mb-0">
+                    <li>Razor Pages site shell with Bootstrap layout</li>
+                    <li>Dynamic registration rows bound with <code>BindProperty</code></li>
+                    <li>Server-backed country list and success handoff page</li>
+                    <li>Navigation prepared for later query and admin pages</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="row g-4">
+    <div class="col-md-4">
+        <div class="feature-card h-100 p-4">
+            <div class="icon-badge mb-3">1</div>
+            <h2 class="h5">Register participants</h2>
+            <p class="mb-0">Select the number of players, fill the rows, and submit the session to the server.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="feature-card h-100 p-4">
+            <div class="icon-badge mb-3">2</div>
+            <h2 class="h5">Hand off to gameplay</h2>
+            <p class="mb-0">After a successful registration, the site presents the session id and the next step into the client.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="feature-card h-100 p-4">
+            <div class="icon-badge mb-3">3</div>
+            <h2 class="h5">Defense-ready structure</h2>
+            <p class="mb-0">The layout and page flow stay close to the course examples so the project is easy to explain.</p>
+        </div>
+    </div>
+</section>

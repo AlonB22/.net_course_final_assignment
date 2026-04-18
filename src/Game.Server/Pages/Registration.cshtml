@@ -1,0 +1,96 @@
+@page
+@model RegistrationModel
+@{
+    ViewData["Title"] = "Registration";
+}
+
+<section class="row g-4">
+    <div class="col-lg-8">
+        <div class="feature-card p-4 p-lg-5">
+            <span class="eyebrow">New session</span>
+            <h1 class="h2 mt-3">Register the players who will share the screen.</h1>
+            <p class="mt-3 mb-0">
+                Choose the number of participants, then fill in each player row. The country list is loaded from the server and the final session is created only after validation passes.
+            </p>
+
+            <form method="post" novalidate class="registration-form mt-4" data-registration-form>
+                <div asp-validation-summary="All" class="alert alert-danger validation-summary"></div>
+
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label asp-for="Form.ParticipantCount" class="form-label"></label>
+                        <select asp-for="Form.ParticipantCount"
+                                asp-items="Model.ParticipantCountOptions"
+                                class="form-select"
+                                data-participant-count></select>
+                        <span asp-validation-for="Form.ParticipantCount" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="count-note">
+                            <span class="label">Visible player rows</span>
+                            <span class="value" data-participant-count-label>@Model.Form.ParticipantCount</span>
+                            <span class="small text-muted">up to 10 participants</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div asp-validation-for="Form.Participants" class="text-danger small mt-3"></div>
+
+                <div class="mt-4">
+                    @for (var i = 0; i < Model.Form.Participants.Count; i++)
+                    {
+                        <div class="participant-row @(i >= Model.Form.ParticipantCount ? "d-none" : string.Empty)" data-participant-row>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h2 class="h5 mb-0">Participant @(i + 1)</h2>
+                                <span class="badge text-bg-secondary">Row @(i + 1)</span>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label asp-for="Form.Participants[i].FirstName" class="form-label"></label>
+                                    <input asp-for="Form.Participants[i].FirstName" class="form-control" />
+                                    <span asp-validation-for="Form.Participants[i].FirstName" class="text-danger small"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <label asp-for="Form.Participants[i].ExternalId" class="form-label"></label>
+                                    <input asp-for="Form.Participants[i].ExternalId" class="form-control" />
+                                    <span asp-validation-for="Form.Participants[i].ExternalId" class="text-danger small"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <label asp-for="Form.Participants[i].PhoneNumber" class="form-label"></label>
+                                    <input asp-for="Form.Participants[i].PhoneNumber" class="form-control" />
+                                    <span asp-validation-for="Form.Participants[i].PhoneNumber" class="text-danger small"></span>
+                                </div>
+                                <div class="col-md-12">
+                                    <label asp-for="Form.Participants[i].CountryId" class="form-label"></label>
+                                    <select asp-for="Form.Participants[i].CountryId"
+                                            asp-items="Model.CountryOptions"
+                                            class="form-select">
+                                        <option value="">Select a country</option>
+                                    </select>
+                                    <span asp-validation-for="Form.Participants[i].CountryId" class="text-danger small"></span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg px-4">Create game session</button>
+                    <a class="btn btn-outline-secondary btn-lg px-4" asp-page="/Index">Back to home</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="feature-card p-4 h-100">
+            <span class="eyebrow">Validation rules</span>
+            <ul class="feature-list mt-3 mb-0">
+                <li>First name must have at least 2 letters.</li>
+                <li>External ID must be between 1 and 1000.</li>
+                <li>Phone number must contain exactly 10 digits.</li>
+                <li>Every participant needs a country from the server list.</li>
+            </ul>
+        </div>
+    </div>
+</section>

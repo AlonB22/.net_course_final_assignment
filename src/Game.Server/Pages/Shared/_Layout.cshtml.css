@@ -1,0 +1,19 @@
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+}
+
+.site-nav {
+  backdrop-filter: blur(18px);
+  background: rgba(11, 24, 38, 0.88);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.page-shell {
+  min-height: calc(100vh - 132px);
+}
+
+.site-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}

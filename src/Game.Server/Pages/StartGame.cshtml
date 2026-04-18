@@ -1,0 +1,87 @@
+@page
+@model StartGameModel
+@{
+    ViewData["Title"] = "Game start";
+}
+
+<section class="row justify-content-center">
+    <div class="col-lg-10 col-xl-9">
+        <div class="feature-card p-4 p-lg-5">
+            <span class="eyebrow">Registration complete</span>
+            <h1 class="h2 mt-3">The game session is ready for the WinForms client.</h1>
+            <p class="mt-3">
+                Use the session id below when you open the client. The server now owns the session and the next gameplay step can start from the client side.
+            </p>
+
+            <div class="row g-3 mt-4">
+                <div class="col-md-6">
+                    <div class="info-tile">
+                        <div class="label">Session id</div>
+                        <div class="value session-code">@Model.SessionId</div>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-light mt-2"
+                                data-copy-button
+                                data-copy-value="@Model.SessionId">
+                            Copy session id
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-tile">
+                        <div class="label">Next step</div>
+                        <div class="value">Open the WinForms client</div>
+                        <div class="text-muted small">The client will use the server session and continue the game flow.</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-tile">
+                        <div class="label">Move timer</div>
+                        <div class="value">@(Model.Registration?.MoveTimeLimitSeconds ?? 10) seconds</div>
+                        <div class="text-muted small">The server stores the session, while the client will enforce the per-turn countdown later.</div>
+                    </div>
+                </div>
+            </div>
+
+            @if (Model.Registration is not null)
+            {
+                <div class="mt-4">
+                    <h2 class="h5">Registered players</h2>
+                    <div class="table-responsive mt-3">
+                        <table class="table table-dark table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Numeric ID</th>
+                                    <th>Phone</th>
+                                    <th>Country</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var player in Model.Registration.Players)
+                                {
+                                    <tr>
+                                        <td>@player.FirstName</td>
+                                        <td>@player.ExternalId</td>
+                                        <td>@player.PhoneNumber</td>
+                                        <td>@player.CountryName</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info mt-4 mb-0">
+                    The registration summary was not available in the redirect payload, but the session id is still ready for the client.
+                </div>
+            }
+
+            <div class="d-flex flex-wrap gap-2 mt-4">
+                <a class="btn btn-primary btn-lg px-4" asp-page="/Registration">Register another game</a>
+                <a class="btn btn-outline-secondary btn-lg px-4" asp-page="/Index">Back to home</a>
+            </div>
+        </div>
+    </div>
+</section>

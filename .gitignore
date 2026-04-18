@@ -1,0 +1,47 @@
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+AnyCPU/
+
+# .NET tooling
+TestResults/
+artifacts/
+*.nupkg
+*.snupkg
+
+# Logs and local run artifacts
+*.log
+server-smoke.out.log
+server-smoke.err.log
+
+# Generated/local packaging output
+submission-output/
+
+# Local databases and IDE caches
+*.mdf
+*.ldf
+*.db
+*.db-shm
+*.db-wal
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Course material to keep out of GitHub
+sylabus.pdf
+Project 10212 Sem A 2026.pdf
+course slides/

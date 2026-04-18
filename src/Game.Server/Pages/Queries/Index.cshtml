@@ -1,0 +1,284 @@
+@page
+@model Game.Server.Pages.Queries.IndexModel
+@{
+    ViewData["Title"] = "Queries";
+}
+
+<section class="feature-card p-4 p-lg-5 mb-4">
+    <span class="eyebrow">Assignment queries</span>
+    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mt-3">
+        <div>
+            <h1 class="h2 mb-2">Query dashboard</h1>
+            <p class="mb-0">Each section below is built with LINQ-only result preparation, matching the course requirement.</p>
+        </div>
+        <div class="text-lg-end">
+            <div class="small text-muted">Data source</div>
+            <div class="fw-semibold">EF Core / LocalDB</div>
+        </div>
+    </div>
+</section>
+
+<section class="feature-card p-4 mb-4">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-6">
+            <label asp-for="NameFilter" class="form-label">Case-sensitive name filter for active players</label>
+            <input asp-for="NameFilter" class="form-control" placeholder="Type an exact substring" />
+        </div>
+        <div class="col-md-6">
+            <button type="submit" class="btn btn-primary px-4">Refresh queries</button>
+        </div>
+    </form>
+</section>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="feature-card p-4 h-100">
+            <h2 class="h5">22. Active players with full details</h2>
+            <p class="text-muted small">Players who participated in at least one game, optionally filtered by a case-sensitive substring.</p>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>ID</th>
+                            <th>Phone</th>
+                            <th>Country</th>
+                            <th>Games</th>
+                            <th>First game</th>
+                            <th>Last game</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.ActivePlayers)
+                        {
+                            <tr>
+                                <td>@row.FirstName</td>
+                                <td>@row.ExternalId</td>
+                                <td>@row.PhoneNumber</td>
+                                <td>@row.CountryName</td>
+                                <td>@row.GameCount</td>
+                                <td>@row.FirstGameUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>@row.LastGameUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="feature-card p-4 h-100">
+            <h2 class="h5">23. Players ordered by name descending</h2>
+            <p class="text-muted small">Case-sensitive ordering, with only the player name and last game date.</p>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Last game</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.PlayersByRecentGame)
+                        {
+                            <tr>
+                                <td>@row.FirstName</td>
+                                <td>@(row.LastGameUtc?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="feature-card p-4 h-100">
+            <h2 class="h5">24. All game sessions</h2>
+            <p class="text-muted small">Session metadata with participant names in turn order.</p>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Session</th>
+                            <th>Started</th>
+                            <th>Finished</th>
+                            <th>Status</th>
+                            <th>Outcome</th>
+                            <th>Limit</th>
+                            <th>Players</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.GameSessions)
+                        {
+                            <tr>
+                                <td><code>@row.GameSessionId</code></td>
+                                <td>@row.StartedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>@(row.CompletedAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
+                                <td>@row.Status</td>
+                                <td>@row.Outcome</td>
+                                <td>@row.MoveTimeLimitSeconds</td>
+                                <td>@string.Join(", ", row.ParticipantNames)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="feature-card p-4 h-100">
+            <h2 class="h5">25. First player by country</h2>
+            <p class="text-muted small">One representative per country, based on the earliest game started by that country's players.</p>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Country</th>
+                            <th>Player</th>
+                            <th>First game</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.CountryRepresentatives)
+                        {
+                            <tr>
+                                <td>@row.CountryName</td>
+                                <td>@row.PlayerName</td>
+                                <td>@row.FirstGameUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="feature-card p-4 h-100">
+            <h2 class="h5">26. Distinct display-name combo</h2>
+            <p class="text-muted small">Case-insensitive normalization keeps names such as Avi and avI in one combo entry.</p>
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-8">
+                    <label asp-for="SelectedDisplayName" class="form-label">Display name</label>
+                    <select asp-for="SelectedDisplayName" asp-items="Model.DisplayNameSelectItems" class="form-select"></select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-outline-primary w-100">Load</button>
+                </div>
+            </form>
+            <div class="table-responsive mt-3">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>ID</th>
+                            <th>Country</th>
+                            <th>Games</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.PlayersWithSelectedDisplayName)
+                        {
+                            <tr>
+                                <td>@row.FirstName</td>
+                                <td>@row.ExternalId</td>
+                                <td>@row.CountryName</td>
+                                <td>@row.GameCount</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="feature-card p-4 h-100">
+            <h2 class="h5">27. Games played per player</h2>
+            <p class="text-muted small">Only the player name and game count are shown.</p>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Games</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.PlayerGameCounts)
+                        {
+                            <tr>
+                                <td>@row.FirstName</td>
+                                <td>@row.GameCount</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="feature-card p-4 h-100">
+            <h2 class="h5">28. Players grouped by games played</h2>
+            <p class="text-muted small">Each bucket is sorted by game count descending.</p>
+            @foreach (var row in Model.GameParticipationGroups)
+            {
+                <div class="border rounded-3 p-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>@row.GameCount game(s)</strong>
+                        <span class="badge text-bg-secondary">@row.PlayerCount player(s)</span>
+                    </div>
+                    <div class="small text-muted mt-2">@string.Join(", ", row.PlayerNames)</div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="feature-card p-4 h-100">
+            <h2 class="h5">29. Players by country</h2>
+            <p class="text-muted small">Countries with at least one player are grouped together.</p>
+            @foreach (var row in Model.CountryPlayers)
+            {
+                <div class="border rounded-3 p-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>@row.CountryName</strong>
+                        <span class="badge text-bg-secondary">@row.PlayerCount player(s)</span>
+                    </div>
+                    <div class="small text-muted mt-2">@string.Join(", ", row.PlayerNames)</div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="feature-card p-4 h-100">
+            <h2 class="h5">30. Top 2 countries by player count</h2>
+            <p class="text-muted small">Only the two highest counts are displayed.</p>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Country</th>
+                            <th>Players</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.TopCountries)
+                        {
+                            <tr>
+                                <td>@row.CountryName</td>
+                                <td>@row.PlayerCount</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

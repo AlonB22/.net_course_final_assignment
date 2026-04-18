@@ -1,0 +1,150 @@
+@page
+@model Game.Server.Pages.Admin.IndexModel
+@{
+    ViewData["Title"] = "Admin";
+}
+
+<section class="feature-card p-4 p-lg-5 mb-4">
+    <span class="eyebrow">Maintenance</span>
+    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mt-3">
+        <div>
+            <h1 class="h2 mb-2">Player and game admin</h1>
+            <p class="mb-0">Update player details, delete players with their games, and delete standalone game sessions.</p>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        {
+            <div class="alert alert-success mb-0">@Model.StatusMessage</div>
+        }
+    </div>
+</section>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="feature-card p-4 h-100">
+            <h2 class="h5">Update player</h2>
+            <p class="text-muted small">The numeric ID is immutable and shown only for reference.</p>
+
+            <form method="get" class="row g-3 align-items-end mb-4">
+                <div class="col-12">
+                    <label asp-for="SelectedPlayerId" class="form-label">Load player</label>
+                    <select asp-for="SelectedPlayerId" asp-items="Model.PlayerOptions" class="form-select">
+                        <option value="">Select a player</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-outline-primary w-100">Load details</button>
+                </div>
+            </form>
+
+            @if (Model.SelectedPlayer is not null)
+            {
+                <div class="small text-muted mb-3">
+                    Player ID: <code>@Model.SelectedPlayer.PlayerId</code><br />
+                    Numeric ID: <code>@Model.SelectedPlayer.ExternalId</code><br />
+                    Games played: @Model.SelectedPlayer.GameCount
+                </div>
+
+                <form method="post" asp-page-handler="UpdatePlayer">
+                    <div asp-validation-summary="All" class="alert alert-danger"></div>
+                    <input type="hidden" asp-for="EditForm.PlayerId" />
+                    <div class="mb-3">
+                        <label asp-for="EditForm.FirstName" class="form-label"></label>
+                        <input asp-for="EditForm.FirstName" class="form-control" />
+                        <span asp-validation-for="EditForm.FirstName" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="EditForm.PhoneNumber" class="form-label"></label>
+                        <input asp-for="EditForm.PhoneNumber" class="form-control" />
+                        <span asp-validation-for="EditForm.PhoneNumber" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="EditForm.CountryId" class="form-label"></label>
+                        <select asp-for="EditForm.CountryId" asp-items="Model.CountryOptions" class="form-select">
+                            <option value="">Select a country</option>
+                        </select>
+                        <span asp-validation-for="EditForm.CountryId" class="text-danger small"></span>
+                    </div>
+                    <button type="submit" class="btn btn-primary px-4">Save changes</button>
+                </form>
+            }
+            else
+            {
+                <div class="alert alert-secondary mb-0">No player is currently selected.</div>
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="feature-card p-4 mb-4">
+            <h2 class="h5">Players</h2>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>ID</th>
+                            <th>Phone</th>
+                            <th>Country</th>
+                            <th>Games</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Players)
+                        {
+                            <tr>
+                                <td>@row.FirstName</td>
+                                <td>@row.ExternalId</td>
+                                <td>@row.PhoneNumber</td>
+                                <td>@row.CountryName</td>
+                                <td>@row.GameCount</td>
+                                <td class="text-end">
+                                    <form method="post" asp-page-handler="DeletePlayer" class="d-inline">
+                                        <input type="hidden" name="playerId" value="@row.PlayerId" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete player</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="feature-card p-4">
+            <h2 class="h5">Game sessions</h2>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Session</th>
+                            <th>Started</th>
+                            <th>Status</th>
+                            <th>Outcome</th>
+                            <th>Players</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Games)
+                        {
+                            <tr>
+                                <td><code>@row.GameSessionId</code></td>
+                                <td>@row.StartedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>@row.Status</td>
+                                <td>@row.Outcome</td>
+                                <td>@string.Join(", ", row.ParticipantNames)</td>
+                                <td class="text-end">
+                                    <form method="post" asp-page-handler="DeleteSession" class="d-inline">
+                                        <input type="hidden" name="sessionId" value="@row.GameSessionId" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete game</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
