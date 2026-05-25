@@ -1,3 +1,4 @@
+using Game.Contracts.Enums;
 using Game.Server.Models;
 using Game.Server.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -56,7 +57,7 @@ public class IndexModel(IQueryRetrievalService queryRetrievalService) : PageMode
         string? nameFilter)
     {
         return players
-            .Where(player => player.GameParticipations.Any())
+            .Where(player => CompletedParticipations(player).Any())
             .Where(player => string.IsNullOrWhiteSpace(nameFilter)
                 || player.FirstName.Contains(nameFilter, StringComparison.Ordinal))
             .OrderBy(player => player.FirstName, StringComparer.Ordinal)
@@ -66,22 +67,21 @@ public class IndexModel(IQueryRetrievalService queryRetrievalService) : PageMode
                 player.ExternalId,
                 player.PhoneNumber,
                 player.Country?.Name ?? string.Empty,
-                player.GameParticipations.Count,
-                player.GameParticipations.Min(participation => participation.GameSession!.StartedAtUtc),
-                player.GameParticipations.Max(participation => participation.GameSession!.StartedAtUtc)))
+                CompletedParticipations(player).Count(),
+                CompletedParticipations(player).Min(participation => participation.GameSession!.StartedAtUtc),
+                CompletedParticipations(player).Max(participation => participation.GameSession!.StartedAtUtc)))
             .ToArray();
     }
 
     private static IReadOnlyList<PlayerRecentGameRow> BuildPlayersByRecentGame(IReadOnlyList<Player> players)
     {
         return players
+            .Where(player => CompletedParticipations(player).Any())
             .OrderByDescending(player => player.FirstName, StringComparer.Ordinal)
             .ThenBy(player => player.ExternalId)
             .Select(player => new PlayerRecentGameRow(
                 player.FirstName,
-                player.GameParticipations.Any()
-                    ? player.GameParticipations.Max(participation => participation.GameSession!.StartedAtUtc)
-                    : null))
+                CompletedParticipations(player).Max(participation => participation.GameSession!.StartedAtUtc)))
             .ToArray();
     }
 
@@ -109,14 +109,14 @@ public class IndexModel(IQueryRetrievalService queryRetrievalService) : PageMode
         IReadOnlyList<Country> countries,
         IReadOnlyList<Player> players)
     {
-        var playedPlayers = players.Where(player => player.GameParticipations.Any()).ToArray();
+        var playedPlayers = players.Where(player => CompletedParticipations(player).Any()).ToArray();
 
         return countries
             .Select(country =>
             {
                 var firstPlayer = playedPlayers
                     .Where(player => player.CountryId == country.CountryId)
-                    .OrderBy(player => player.GameParticipations.Min(participation => participation.GameSession!.StartedAtUtc))
+                    .OrderBy(player => CompletedParticipations(player).Min(participation => participation.GameSession!.StartedAtUtc))
                     .ThenBy(player => player.FirstName, StringComparer.Ordinal)
                     .ThenBy(player => player.ExternalId)
                     .FirstOrDefault();
@@ -126,7 +126,7 @@ public class IndexModel(IQueryRetrievalService queryRetrievalService) : PageMode
                     : new CountryRepresentativeRow(
                         country.Name,
                         firstPlayer.FirstName,
-                        firstPlayer.GameParticipations.Min(participation => participation.GameSession!.StartedAtUtc));
+                        CompletedParticipations(firstPlayer).Min(participation => participation.GameSession!.StartedAtUtc));
             })
             .Where(row => row is not null)
             .Select(row => row!)
@@ -163,33 +163,37 @@ public class IndexModel(IQueryRetrievalService queryRetrievalService) : PageMode
                     player.FirstName,
                     player.ExternalId,
                     player.Country?.Name ?? string.Empty,
-                    player.GameParticipations.Count))
+                    CompletedParticipations(player).Count()))
                 .ToArray();
     }
 
     private static IReadOnlyList<PlayerGameCountRow> BuildPlayerGameCounts(IReadOnlyList<Player> players)
     {
         return players
-            .OrderByDescending(player => player.GameParticipations.Count)
+            .OrderByDescending(player => CompletedParticipations(player).Count())
             .ThenBy(player => player.FirstName, StringComparer.Ordinal)
             .ThenBy(player => player.ExternalId)
             .Select(player => new PlayerGameCountRow(
                 player.FirstName,
-                player.GameParticipations.Count))
+                CompletedParticipations(player).Count()))
             .ToArray();
     }
 
     private static IReadOnlyList<GameParticipationGroupRow> BuildGameParticipationGroups(IReadOnlyList<Player> players)
     {
         return players
-            .GroupBy(player => player.GameParticipations.Count)
+            .GroupBy(player => CompletedParticipations(player).Count())
             .OrderByDescending(group => group.Key)
             .Select(group => new GameParticipationGroupRow(
                 group.Key,
                 group.Count(),
                 group.OrderBy(player => player.FirstName, StringComparer.Ordinal)
                     .ThenBy(player => player.ExternalId)
-                    .Select(player => player.FirstName)
+                    .Select(player => new PlayerDetailRow(
+                        player.FirstName,
+                        player.ExternalId,
+                        player.PhoneNumber,
+                        player.Country?.Name ?? string.Empty))
                     .ToArray()))
             .ToArray();
     }
@@ -198,13 +202,11 @@ public class IndexModel(IQueryRetrievalService queryRetrievalService) : PageMode
         IReadOnlyList<Country> countries,
         IReadOnlyList<Player> players)
     {
-        var playedPlayers = players.Where(player => player.GameParticipations.Any()).ToArray();
-
         return countries
             .Select(country => new CountryPlayersRow(
                 country.Name,
-                playedPlayers.Count(player => player.CountryId == country.CountryId),
-                playedPlayers.Where(player => player.CountryId == country.CountryId)
+                players.Count(player => player.CountryId == country.CountryId),
+                players.Where(player => player.CountryId == country.CountryId)
                     .OrderBy(player => player.FirstName, StringComparer.Ordinal)
                     .ThenBy(player => player.ExternalId)
                     .Select(player => player.FirstName)
@@ -218,17 +220,25 @@ public class IndexModel(IQueryRetrievalService queryRetrievalService) : PageMode
         IReadOnlyList<Country> countries,
         IReadOnlyList<Player> players)
     {
-        var playedPlayers = players.Where(player => player.GameParticipations.Any()).ToArray();
-
         return countries
             .Select(country => new TopCountryRow(
                 country.Name,
-                playedPlayers.Count(player => player.CountryId == country.CountryId)))
-            .Where(row => row.PlayerCount > 0)
-            .OrderByDescending(row => row.PlayerCount)
+                players.Where(player => player.CountryId == country.CountryId)
+                    .SelectMany(player => CompletedParticipations(player))
+                    .Select(participation => participation.GameSessionId)
+                    .Distinct()
+                    .Count()))
+            .Where(row => row.GameCount > 0)
+            .OrderByDescending(row => row.GameCount)
             .ThenBy(row => row.CountryName, StringComparer.Ordinal)
             .Take(2)
             .ToArray();
+    }
+
+    private static IEnumerable<GameParticipant> CompletedParticipations(Player player)
+    {
+        return player.GameParticipations
+            .Where(participation => participation.GameSession?.Status == SessionStatus.Completed);
     }
 
     public sealed record PlayerActivityRow(
@@ -276,7 +286,13 @@ public class IndexModel(IQueryRetrievalService queryRetrievalService) : PageMode
     public sealed record GameParticipationGroupRow(
         int GameCount,
         int PlayerCount,
-        IReadOnlyList<string> PlayerNames);
+        IReadOnlyList<PlayerDetailRow> Players);
+
+    public sealed record PlayerDetailRow(
+        string FirstName,
+        int ExternalId,
+        string PhoneNumber,
+        string CountryName);
 
     public sealed record CountryPlayersRow(
         string CountryName,
@@ -285,5 +301,5 @@ public class IndexModel(IQueryRetrievalService queryRetrievalService) : PageMode
 
     public sealed record TopCountryRow(
         string CountryName,
-        int PlayerCount);
+        int GameCount);
 }

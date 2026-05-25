@@ -25,7 +25,14 @@
                                 data-participant-count></select>
                         <span asp-validation-for="Form.ParticipantCount" class="text-danger small"></span>
                     </div>
-                    <div class="col-md-8">
+                    <div class="col-md-4">
+                        <label asp-for="Form.MoveTimeLimitSeconds" class="form-label"></label>
+                        <select asp-for="Form.MoveTimeLimitSeconds"
+                                asp-items="Model.MoveTimeLimitOptions"
+                                class="form-select"></select>
+                        <span asp-validation-for="Form.MoveTimeLimitSeconds" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-4">
                         <div class="count-note">
                             <span class="label">Visible player rows</span>
                             <span class="value" data-participant-count-label>@Model.Form.ParticipantCount</span>
@@ -90,6 +97,7 @@
                 <li>External ID must be between 1 and 1000.</li>
                 <li>Phone number must contain exactly 10 digits.</li>
                 <li>Every participant needs a country from the server list.</li>
+                <li>The move timer must be 2, 5, 10, or 15 seconds.</li>
             </ul>
         </div>
     </div>

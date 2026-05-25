@@ -34,7 +34,7 @@
     <div class="col-lg-6">
         <div class="feature-card p-4 h-100">
             <h2 class="h5">22. Active players with full details</h2>
-            <p class="text-muted small">Players who participated in at least one game, optionally filtered by a case-sensitive substring.</p>
+            <p class="text-muted small">Players who participated in at least one completed game, optionally filtered by a case-sensitive substring.</p>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
                     <thead>
@@ -225,7 +225,7 @@
     <div class="col-lg-6">
         <div class="feature-card p-4 h-100">
             <h2 class="h5">28. Players grouped by games played</h2>
-            <p class="text-muted small">Each bucket is sorted by game count descending.</p>
+            <p class="text-muted small">Each bucket is sorted by completed game count descending.</p>
             @foreach (var row in Model.GameParticipationGroups)
             {
                 <div class="border rounded-3 p-3 mb-3">
@@ -233,7 +233,29 @@
                         <strong>@row.GameCount game(s)</strong>
                         <span class="badge text-bg-secondary">@row.PlayerCount player(s)</span>
                     </div>
-                    <div class="small text-muted mt-2">@string.Join(", ", row.PlayerNames)</div>
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>ID</th>
+                                    <th>Phone</th>
+                                    <th>Country</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var player in row.Players)
+                                {
+                                    <tr>
+                                        <td>@player.FirstName</td>
+                                        <td>@player.ExternalId</td>
+                                        <td>@player.PhoneNumber</td>
+                                        <td>@player.CountryName</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             }
         </div>
@@ -242,7 +264,7 @@
     <div class="col-lg-6">
         <div class="feature-card p-4 h-100">
             <h2 class="h5">29. Players by country</h2>
-            <p class="text-muted small">Countries with at least one player are grouped together.</p>
+            <p class="text-muted small">Countries with at least one registered player are grouped together.</p>
             @foreach (var row in Model.CountryPlayers)
             {
                 <div class="border rounded-3 p-3 mb-3">
@@ -258,14 +280,14 @@
 
     <div class="col-lg-6">
         <div class="feature-card p-4 h-100">
-            <h2 class="h5">30. Top 2 countries by player count</h2>
-            <p class="text-muted small">Only the two highest counts are displayed.</p>
+            <h2 class="h5">30. Top 2 countries by game count</h2>
+            <p class="text-muted small">Only the two countries with the most completed games are displayed.</p>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
                     <thead>
                         <tr>
                             <th>Country</th>
-                            <th>Players</th>
+                            <th>Games</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -273,7 +295,7 @@
                         {
                             <tr>
                                 <td>@row.CountryName</td>
-                                <td>@row.PlayerCount</td>
+                                <td>@row.GameCount</td>
                             </tr>
                         }
                     </tbody>

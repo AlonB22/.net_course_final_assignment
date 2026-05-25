@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text.RegularExpressions;
 using Game.Client.Controls;
 using Game.Client.Forms;
 using Game.Client.Replay.Models;
@@ -11,6 +12,7 @@ namespace Game.Client;
 
 public partial class Form1 : Form
 {
+    private const string CardBodyControlName = "CardBody";
     private readonly IGameServerApiClient _gameServerApiClient;
     private readonly GameBoardControl _boardControl = new();
     private readonly AnnotationSurfaceControl _annotationSurface = new();
@@ -27,6 +29,7 @@ public partial class Form1 : Form
     private readonly Button _seconds15Button = new();
     private readonly Button _clearAnnotationsButton = new();
     private readonly Button _loadSessionButton = new();
+    private readonly Button _pasteSessionButton = new();
     private readonly Button _refreshSessionButton = new();
     private readonly Button _submitMoveButton = new();
     private readonly Button _clearSelectionButton = new();
@@ -234,15 +237,19 @@ public partial class Form1 : Form
     private Control BuildBoardColumn()
     {
         var column = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Padding = new Padding(18, 18, 10, 18) };
-        column.RowStyles.Add(new RowStyle(SizeType.Percent, 72F));
-        column.RowStyles.Add(new RowStyle(SizeType.Percent, 28F));
+        column.RowStyles.Add(new RowStyle(SizeType.Percent, 76F));
+        column.RowStyles.Add(new RowStyle(SizeType.Percent, 24F));
 
         var boardGroup = CreateGroupCard("Board Surface", "8x4 matrix renderer with cell hit testing");
-        boardGroup.Controls.Add(_boardControl);
+        AddCardContent(boardGroup, _boardControl);
 
         var annotationGroup = CreateGroupCard("Annotation Surface", "Freehand drawing canvas with clear/reset support");
-        annotationGroup.Controls.Add(BuildAnnotationTools());
-        annotationGroup.Controls.Add(_annotationSurface);
+        var annotationContent = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2 };
+        annotationContent.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
+        annotationContent.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+        annotationContent.Controls.Add(BuildAnnotationTools(), 0, 0);
+        annotationContent.Controls.Add(_annotationSurface, 0, 1);
+        AddCardContent(annotationGroup, annotationContent);
 
         column.Controls.Add(boardGroup, 0, 0);
         column.Controls.Add(annotationGroup, 0, 1);
@@ -251,29 +258,53 @@ public partial class Form1 : Form
 
     private Control BuildSidebarColumn()
     {
-        var sidebar = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5, Padding = new Padding(10, 18, 18, 18) };
-        sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 235F));
-        sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 170F));
+        var scrollHost = new Panel
+        {
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            BackColor = Color.FromArgb(16, 23, 38),
+            Padding = new Padding(10, 18, 18, 18)
+        };
+
+        var sidebar = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 1,
+            RowCount = 5,
+            Padding = new Padding(0)
+        };
+        sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 270F));
+        sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 230F));
         sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 150F));
+        sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 270F));
         sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 220F));
-        sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
         sidebar.Controls.Add(BuildSessionCard(), 0, 0);
         sidebar.Controls.Add(BuildTimerCard(), 0, 1);
         sidebar.Controls.Add(BuildActionCard(), 0, 2);
         sidebar.Controls.Add(BuildReplayCard(), 0, 3);
         sidebar.Controls.Add(BuildLogCard(), 0, 4);
-        return sidebar;
+
+        scrollHost.ClientSizeChanged += (_, _) =>
+        {
+            sidebar.Width = Math.Max(320, scrollHost.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 4);
+        };
+        sidebar.Width = 380;
+        scrollHost.Controls.Add(sidebar);
+        return scrollHost;
     }
 
     private Control BuildSessionCard()
     {
         var card = CreateGroupCard("Session", "Load a session id and choose a registered human player");
-        var grid = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 5, Padding = new Padding(12, 10, 12, 12) };
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65F));
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35F));
+        var grid = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 6, Padding = new Padding(12, 10, 12, 12) };
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
         grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
         grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
         grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
+        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
         grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
         grid.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
@@ -285,7 +316,24 @@ public partial class Form1 : Form
         _sessionIdTextBox.BackColor = Color.FromArgb(13, 18, 30);
         _sessionIdTextBox.ForeColor = Color.WhiteSmoke;
         _sessionIdTextBox.BorderStyle = BorderStyle.FixedSingle;
+        _sessionIdTextBox.ShortcutsEnabled = true;
+        _sessionIdTextBox.ContextMenuStrip = BuildSessionIdContextMenu();
+        _sessionIdTextBox.KeyDown += async (_, e) =>
+        {
+            if (e.KeyCode != Keys.Enter)
+            {
+                return;
+            }
+
+            e.SuppressKeyPress = true;
+            await LoadSessionAsync();
+        };
         grid.Controls.Add(_sessionIdTextBox, 0, 1);
+        grid.SetColumnSpan(_sessionIdTextBox, 2);
+
+        _pasteSessionButton.Text = "Paste";
+        _pasteSessionButton.Dock = DockStyle.Fill;
+        _pasteSessionButton.Click += (_, _) => PasteSessionIdFromClipboard();
 
         _loadSessionButton.Text = "Load Session";
         _loadSessionButton.Dock = DockStyle.Fill;
@@ -295,14 +343,17 @@ public partial class Form1 : Form
         _refreshSessionButton.Dock = DockStyle.Fill;
         _refreshSessionButton.Click += async (_, _) => await RefreshSessionAsync();
 
-        var buttonRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2 };
-        buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60F));
-        buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40F));
-        buttonRow.Controls.Add(_loadSessionButton, 0, 0);
-        buttonRow.Controls.Add(_refreshSessionButton, 1, 0);
-        grid.Controls.Add(buttonRow, 1, 1);
+        var buttonRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3 };
+        buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 28F));
+        buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 44F));
+        buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 28F));
+        buttonRow.Controls.Add(_pasteSessionButton, 0, 0);
+        buttonRow.Controls.Add(_loadSessionButton, 1, 0);
+        buttonRow.Controls.Add(_refreshSessionButton, 2, 0);
+        grid.Controls.Add(buttonRow, 0, 2);
+        grid.SetColumnSpan(buttonRow, 2);
 
-        grid.Controls.Add(new Label { Dock = DockStyle.Fill, AutoSize = true, Text = "Human player", ForeColor = Color.FromArgb(220, 224, 233), Font = new Font("Segoe UI", 9F) }, 0, 2);
+        grid.Controls.Add(new Label { Dock = DockStyle.Fill, AutoSize = true, Text = "Human player", ForeColor = Color.FromArgb(220, 224, 233), Font = new Font("Segoe UI", 9F) }, 0, 3);
         grid.SetColumnSpan(grid.Controls[^1], 2);
 
         _humanPlayerComboBox.Dock = DockStyle.Fill;
@@ -313,7 +364,7 @@ public partial class Form1 : Form
         _humanPlayerComboBox.AutoCompleteSource = AutoCompleteSource.ListItems;
         _humanPlayerComboBox.SelectedIndexChanged += (_, _) => UpdateSelectionLabels();
         _humanPlayerComboBox.TextChanged += (_, _) => UpdateSelectionLabels();
-        grid.Controls.Add(_humanPlayerComboBox, 0, 3);
+        grid.Controls.Add(_humanPlayerComboBox, 0, 4);
         grid.SetColumnSpan(_humanPlayerComboBox, 2);
 
         _selectedPlayerIdValueLabel.Text = "Human player id: none";
@@ -326,10 +377,22 @@ public partial class Form1 : Form
         _sessionInfoValueLabel.ForeColor = Color.FromArgb(197, 205, 220);
         _sessionInfoValueLabel.Font = new Font("Segoe UI", 8.5F);
 
-        grid.Controls.Add(_selectedPlayerIdValueLabel, 0, 4);
-        grid.Controls.Add(_sessionInfoValueLabel, 1, 4);
-        card.Controls.Add(grid);
+        grid.Controls.Add(_selectedPlayerIdValueLabel, 0, 5);
+        grid.Controls.Add(_sessionInfoValueLabel, 1, 5);
+        AddCardContent(card, grid);
         return card;
+    }
+
+    private ContextMenuStrip BuildSessionIdContextMenu()
+    {
+        var menu = new ContextMenuStrip();
+        menu.Items.Add("Paste session id", null, (_, _) => PasteSessionIdFromClipboard());
+        menu.Items.Add("Clear", null, (_, _) =>
+        {
+            _sessionIdTextBox.Clear();
+            _sessionIdTextBox.Focus();
+        });
+        return menu;
     }
 
     private Control BuildTimerCard()
@@ -367,7 +430,7 @@ public partial class Form1 : Form
         buttons.Controls.AddRange([_seconds2Button, _seconds5Button, _seconds10Button, _seconds15Button]);
         grid.Controls.Add(buttons, 0, 3);
         grid.SetColumnSpan(buttons, 2);
-        card.Controls.Add(grid);
+        AddCardContent(card, grid);
         return card;
     }
 
@@ -400,7 +463,7 @@ public partial class Form1 : Form
         panel.Controls.Add(_clearSelectionButton, 0, 1);
         panel.Controls.Add(_clearAnnotationsButton, 0, 2);
         panel.Controls.Add(_selectionValueLabel, 0, 3);
-        card.Controls.Add(panel);
+        AddCardContent(card, panel);
         return card;
     }
 
@@ -413,24 +476,24 @@ public partial class Form1 : Form
         _eventLog.BorderStyle = BorderStyle.FixedSingle;
         _eventLog.IntegralHeight = false;
         _eventLog.Items.Add("Ready.");
-        card.Controls.Add(_eventLog);
+        AddCardContent(card, _eventLog);
         return card;
     }
 
     private Control BuildReplayCard()
     {
-        var card = CreateGroupCard("Local Replays", "Select a completed game and play it back read-only");
+        var card = CreateGroupCard("Local Replays", "Select any saved game and play it back read-only");
         var grid = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Padding = new Padding(12, 10, 12, 12) };
         grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
-        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 102F));
-        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 34F));
         grid.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F));
+        grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 48F));
 
         var title = new Label
         {
             Dock = DockStyle.Fill,
             AutoSize = true,
-            Text = "Choose a local game from the replay database.",
+            Text = "Choose a saved local game, then press Play Replay.",
             ForeColor = Color.FromArgb(220, 224, 233),
             Font = new Font("Segoe UI", 8.75F)
         };
@@ -441,6 +504,7 @@ public partial class Form1 : Form
         _replayGamesListBox.BorderStyle = BorderStyle.FixedSingle;
         _replayGamesListBox.IntegralHeight = false;
         _replayGamesListBox.SelectedIndexChanged += (_, _) => UpdateReplaySelectionLabels();
+        _replayGamesListBox.DoubleClick += async (_, _) => await PlaySelectedReplayAsync();
 
         var buttonRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3 };
         buttonRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 36F));
@@ -451,7 +515,7 @@ public partial class Form1 : Form
         _refreshReplayGamesButton.Dock = DockStyle.Fill;
         _refreshReplayGamesButton.Click += async (_, _) => await RefreshReplayGamesAsync();
 
-        _playReplayButton.Text = "Play Selected";
+        _playReplayButton.Text = "Play Replay";
         _playReplayButton.Dock = DockStyle.Fill;
         _playReplayButton.Click += async (_, _) => await PlaySelectedReplayAsync();
 
@@ -465,17 +529,17 @@ public partial class Form1 : Form
 
         _replayStatusValueLabel.Dock = DockStyle.Fill;
         _replayStatusValueLabel.ForeColor = Color.FromArgb(197, 205, 220);
-        _replayStatusValueLabel.Font = new Font("Segoe UI", 8.5F);
+        _replayStatusValueLabel.Font = new Font("Segoe UI", 8.75F);
         _replayStatusValueLabel.Text = "No replay selected.";
 
         _replayDetailsValueLabel.Dock = DockStyle.Fill;
         _replayDetailsValueLabel.ForeColor = Color.FromArgb(240, 196, 72);
-        _replayDetailsValueLabel.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+        _replayDetailsValueLabel.Font = new Font("Segoe UI", 8.75F, FontStyle.Bold);
         _replayDetailsValueLabel.Text = "Idle.";
 
         var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2 };
-        footer.RowStyles.Add(new RowStyle(SizeType.Absolute, 18F));
-        footer.RowStyles.Add(new RowStyle(SizeType.Absolute, 18F));
+        footer.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+        footer.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
         footer.Controls.Add(_replayStatusValueLabel, 0, 0);
         footer.Controls.Add(_replayDetailsValueLabel, 0, 1);
 
@@ -483,7 +547,7 @@ public partial class Form1 : Form
         grid.Controls.Add(_replayGamesListBox, 0, 1);
         grid.Controls.Add(buttonRow, 0, 2);
         grid.Controls.Add(footer, 0, 3);
-        card.Controls.Add(grid);
+        AddCardContent(card, grid);
         return card;
     }
 
@@ -501,11 +565,25 @@ public partial class Form1 : Form
     private Control CreateGroupCard(string title, string subtitle)
     {
         var card = new Panel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(24, 34, 55), Margin = new Padding(0, 0, 0, 12) };
+        var body = new Panel
+        {
+            Name = CardBodyControlName,
+            Dock = DockStyle.Fill,
+            BackColor = Color.FromArgb(24, 34, 55)
+        };
         var header = new Panel { Dock = DockStyle.Top, Height = 54, BackColor = Color.FromArgb(31, 42, 66), Padding = new Padding(14, 10, 14, 8) };
         header.Controls.Add(new Label { Dock = DockStyle.Top, AutoSize = true, Text = title, ForeColor = Color.White, Font = new Font("Segoe UI", 11.5F, FontStyle.Bold) });
         header.Controls.Add(new Label { Dock = DockStyle.Bottom, AutoSize = true, Text = subtitle, ForeColor = Color.FromArgb(196, 202, 214), Font = new Font("Segoe UI", 8.5F) });
+        card.Controls.Add(body);
         card.Controls.Add(header);
         return card;
+    }
+
+    private static void AddCardContent(Control card, Control content)
+    {
+        var body = card.Controls.Find(CardBodyControlName, searchAllChildren: false).FirstOrDefault() ?? card;
+        content.Dock = DockStyle.Fill;
+        body.Controls.Add(content);
     }
 
     private void ConfigureTimerButton(Button button, string label, int seconds)
@@ -574,6 +652,7 @@ public partial class Form1 : Form
         _refreshSessionButton.Enabled = _activeSession is not null && !_isBusy && !_isReplayPlaying;
         _submitMoveButton.Enabled = _activeSession is not null && inProgress && !_isBusy && !_isReplayPlaying;
         _loadSessionButton.Enabled = !_isBusy && !_isReplayPlaying;
+        _pasteSessionButton.Enabled = !_isBusy && !_isReplayPlaying;
         _clearSelectionButton.Enabled = !_isBusy && !_isReplayMode && !_isReplayPlaying;
         _humanPlayerComboBox.Enabled = _activeSession is not null && !_isBusy && !_isReplayMode && !_isReplayPlaying;
         _sessionIdTextBox.Enabled = !_isBusy && !_isReplayPlaying;
@@ -809,12 +888,38 @@ public partial class Form1 : Form
 
     private bool ResolveRequestedSessionId(out Guid sessionId)
     {
-        if (_activeSession is not null)
+        var sessionIdText = NormalizeSessionIdText(_sessionIdTextBox.Text);
+        if (string.IsNullOrWhiteSpace(sessionIdText) && _activeSession is not null)
         {
-            _sessionIdTextBox.Text = _activeSession.Session.SessionId.ToString("D");
+            sessionIdText = _activeSession.Session.SessionId.ToString("D");
         }
 
-        return Guid.TryParse(_sessionIdTextBox.Text.Trim(), out sessionId);
+        _sessionIdTextBox.Text = sessionIdText;
+        return Guid.TryParse(sessionIdText, out sessionId);
+    }
+
+    private void PasteSessionIdFromClipboard()
+    {
+        if (!Clipboard.ContainsText())
+        {
+            AddStatus("Clipboard does not contain text.");
+            return;
+        }
+
+        _sessionIdTextBox.Text = NormalizeSessionIdText(Clipboard.GetText());
+        _sessionIdTextBox.Focus();
+        _sessionIdTextBox.SelectionStart = _sessionIdTextBox.TextLength;
+        AddStatus("Session id pasted. Click Load Session or press Enter.");
+    }
+
+    private static string NormalizeSessionIdText(string value)
+    {
+        var trimmed = value.Trim();
+        var match = Regex.Match(
+            trimmed,
+            "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
+
+        return match.Success ? match.Value : trimmed;
     }
 
     private bool TryResolveHumanPlayerId(out Guid humanPlayerId)

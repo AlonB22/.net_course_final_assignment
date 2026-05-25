@@ -20,6 +20,9 @@ TestResults/
 artifacts/
 *.nupkg
 *.snupkg
+*.trx
+coverage/
+coverage.*
 
 # Logs and local run artifacts
 *.log
@@ -28,6 +31,11 @@ server-smoke.err.log
 
 # Generated/local packaging output
 submission-output/
+*.zip
+*.dacpac
+
+# Agent/task scratch files
+tasks/
 
 # Local databases and IDE caches
 *.mdf

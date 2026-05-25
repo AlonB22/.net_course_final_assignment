@@ -11,7 +11,6 @@ namespace Game.Server.Pages;
 public class RegistrationModel : PageModel
 {
     private const int MaxParticipants = 10;
-    private const int DefaultMoveTimeLimitSeconds = 10;
     private readonly ICountryCatalogService _countryCatalogService;
     private readonly IRegistrationService _registrationService;
     private readonly ILogger<RegistrationModel> _logger;
@@ -34,6 +33,8 @@ public class RegistrationModel : PageModel
 
     public IReadOnlyList<SelectListItem> ParticipantCountOptions { get; private set; } = CreateParticipantCountOptions();
 
+    public IReadOnlyList<SelectListItem> MoveTimeLimitOptions { get; private set; } = CreateMoveTimeLimitOptions();
+
     public IReadOnlyList<SelectListItem> CountryOptions { get; private set; } = [];
 
     public async Task OnGetAsync()
@@ -53,7 +54,7 @@ public class RegistrationModel : PageModel
             return Page();
         }
 
-        var request = Form.ToRequest(DefaultMoveTimeLimitSeconds);
+        var request = Form.ToRequest();
 
         try
         {
@@ -72,6 +73,7 @@ public class RegistrationModel : PageModel
     private async Task LoadLookupsAsync()
     {
         ParticipantCountOptions = CreateParticipantCountOptions();
+        MoveTimeLimitOptions = CreateMoveTimeLimitOptions();
         CountryOptions = (await _countryCatalogService.GetCountriesAsync())
             .Select(country => new SelectListItem($"{country.Name}", country.CountryId.ToString()))
             .ToArray();
@@ -111,12 +113,18 @@ public class RegistrationModel : PageModel
             .Select(count => new SelectListItem(count.ToString(), count.ToString()))
             .ToArray();
 
+    private static IReadOnlyList<SelectListItem> CreateMoveTimeLimitOptions()
+        => new[] { 2, 5, 10, 15 }
+            .Select(seconds => new SelectListItem($"{seconds} seconds", seconds.ToString()))
+            .ToArray();
+
     public sealed class RegistrationInputModel : IValidatableObject
     {
         public static RegistrationInputModel CreateDefault()
             => new()
             {
                 ParticipantCount = 2,
+                MoveTimeLimitSeconds = 10,
                 Participants = Enumerable.Range(0, MaxParticipants)
                     .Select(_ => new ParticipantInputModel())
                     .ToList()
@@ -126,10 +134,14 @@ public class RegistrationModel : PageModel
         [Range(1, MaxParticipants, ErrorMessage = "Choose between 1 and 10 participants.")]
         public int ParticipantCount { get; set; }
 
+        [Display(Name = "Move timer")]
+        [Range(2, 15, ErrorMessage = "Choose 2, 5, 10, or 15 seconds.")]
+        public int MoveTimeLimitSeconds { get; set; } = 10;
+
         [Required]
         public List<ParticipantInputModel> Participants { get; set; } = [];
 
-        public SessionRegistrationRequestDto ToRequest(int moveTimeLimitSeconds)
+        public SessionRegistrationRequestDto ToRequest()
         {
             var activeParticipants = Participants.Take(ParticipantCount)
                 .Select(participant => new ParticipantRegistrationDto(
@@ -139,7 +151,7 @@ public class RegistrationModel : PageModel
                     participant.CountryId))
                 .ToArray();
 
-            return new SessionRegistrationRequestDto(moveTimeLimitSeconds, activeParticipants);
+            return new SessionRegistrationRequestDto(MoveTimeLimitSeconds, activeParticipants);
         }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
@@ -163,6 +175,13 @@ public class RegistrationModel : PageModel
                 yield return new ValidationResult(
                     "Each participant must use a unique numeric ID within the same game.",
                     [nameof(Participants)]);
+            }
+
+            if (MoveTimeLimitSeconds is not 2 and not 5 and not 10 and not 15)
+            {
+                yield return new ValidationResult(
+                    "Choose a move timer of 2, 5, 10, or 15 seconds.",
+                    [nameof(MoveTimeLimitSeconds)]);
             }
         }
     }
