@@ -48,10 +48,3 @@ tasks/
 .DS_Store
 Thumbs.db
 Desktop.ini
-
-# Course material to keep out of GitHub
-sylabus.pdf
-Project 10212 Sem A 2026.pdf
-course slides/
-docs/
-submission/
