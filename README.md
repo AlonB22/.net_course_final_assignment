@@ -56,11 +56,3 @@ The client expects the server base URL from `src/Game.Client/appsettings.json` a
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\Prepare-Submission.ps1
 ```
-
-This generates:
-
-- `submission-output/`
-- `DotNetFinalAssignment-Submission.zip`
-- DACPAC files under `submission/03-Database`
-
-Generated build outputs, DACPACs, submission zips, and local IDE files are ignored by Git.
