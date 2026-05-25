@@ -51,8 +51,3 @@ dotnet run --project src\Game.Client\Game.Client.csproj
 
 The client expects the server base URL from `src/Game.Client/appsettings.json` and stores replay data in LocalDB database `DotNetFinalAssignment_ClientReplay`.
 
-## Prepare Submission
-
-```powershell
-powershell -ExecutionPolicy Bypass -File tools\Prepare-Submission.ps1
-```
