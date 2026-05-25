@@ -1,6 +1,6 @@
 # DotNet Final Assignment
 
-Checkers-style network game for course 10212, Semester A 2026. The solution contains an ASP.NET Core Razor Pages/Web API server, a WinForms client, shared contracts, database deliverables, and automated tests.
+Checkers-style network game for Academic .NET course. The solution contains an ASP.NET Core Razor Pages/Web API server, a WinForms client, shared contracts, database deliverables, and automated tests.
 
 ## Project Structure
 
